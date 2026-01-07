@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **🎯 Project Orchestration:** This project follows [ChittyCan™ Project Standards](../../chittycan/CHITTYCAN_PROJECT_ORCHESTRATOR.md) <!-- was: ../CHITTYCAN_PROJECT_ORCHESTRATOR.md -->
+
 ## Commands
 
 ### Development

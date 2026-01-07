@@ -67,6 +67,11 @@ export const masterEvidence = pgTable("master_evidence", {
   mintingStatus: text("minting_status").default("Pending"), // Minted, Pending, Rejected, Requires Corroboration
   blockNumber: text("block_number"),
   auditNotes: text("audit_notes"),
+  // ChittyCert Certificate-based Digital Signatures
+  signature: text("signature"), // Base64-encoded RSASSA-PKCS1-v1_5 signature
+  signerCertificatePem: text("signer_certificate_pem"), // Full PEM certificate of signer
+  signedByCertSerial: text("signed_by_cert_serial"), // Certificate serial number for quick lookup
+  signatureTimestamp: timestamp("signature_timestamp", { withTimezone: true, mode: 'date' }), // When evidence was cryptographically signed (TIMESTAMPTZ for legal compliance)
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
 });

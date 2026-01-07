@@ -448,6 +448,107 @@ export class DatabaseStorage implements IStorage {
       .where(eq(shareAccessLogs.shareId, shareId))
       .orderBy(desc(shareAccessLogs.accessedAt));
   }
+
+  // ChittyCert Certificate-based Signing
+  async signEvidence(evidenceId: string): Promise<MasterEvidence | undefined> {
+    const evidence = await this.getMasterEvidence(evidenceId);
+    if (!evidence) {
+      throw new Error(`Evidence ${evidenceId} not found`);
+    }
+
+    if (!evidence.contentHash) {
+      throw new Error('Evidence must have a content hash to be signed');
+    }
+
+    // Import ChittyCert service
+    const { getChittyCertService } = await import('./chittycert-service');
+    const certService = getChittyCertService();
+
+    // Sign the evidence content hash
+    const signatureResult = await certService.signEvidence(evidence.contentHash);
+
+    // Update evidence with signature
+    const [updated] = await this.db.update(masterEvidence)
+      .set({
+        signature: signatureResult.signature,
+        signerCertificatePem: signatureResult.certificatePem,
+        signedByCertSerial: signatureResult.certificateSerial,
+        signatureTimestamp: new Date(signatureResult.timestamp),
+        updatedAt: new Date()
+      })
+      .where(eq(masterEvidence.id, evidenceId))
+      .returning();
+
+    // Create chain of custody entry for signing
+    await this.createChainOfCustodyEntry({
+      evidence: evidenceId,
+      custodian: evidence.userBinding,
+      dateReceived: new Date(),
+      transferMethod: 'CRYPTOGRAPHIC_SIGNATURE',
+      integrityCheckMethod: 'CERTIFICATE_SIGNATURE',
+      integrityVerified: true,
+      notes: `Evidence cryptographically signed with ChittyCert certificate ${signatureResult.certificateSerial}`
+    });
+
+    // Create audit entry
+    await this.createAuditEntry({
+      user: evidence.userBinding,
+      actionType: 'Sign',
+      targetArtifact: evidenceId,
+      successFailure: 'Success',
+      details: `Evidence signed with certificate ${signatureResult.certificateSerial} using ${signatureResult.algorithm}`
+    });
+
+    return updated;
+  }
+
+  async verifyEvidenceSignature(evidenceId: string): Promise<{
+    valid: boolean;
+    signatureValid: boolean;
+    certificateValid: boolean;
+    details: string;
+  }> {
+    const evidence = await this.getMasterEvidence(evidenceId);
+    if (!evidence) {
+      throw new Error(`Evidence ${evidenceId} not found`);
+    }
+
+    if (!evidence.signature || !evidence.signerCertificatePem || !evidence.contentHash) {
+      return {
+        valid: false,
+        signatureValid: false,
+        certificateValid: false,
+        details: 'Evidence is not signed or missing required fields'
+      };
+    }
+
+    // Import ChittyCert service
+    const { getChittyCertService } = await import('./chittycert-service');
+    const certService = getChittyCertService();
+
+    // Verify the signature
+    const verificationResult = await certService.verifySignature(
+      evidence.contentHash,
+      evidence.signature,
+      evidence.signerCertificatePem
+    );
+
+    // Create audit entry for verification check
+    await this.createAuditEntry({
+      user: evidence.userBinding,
+      actionType: 'Verify',
+      targetArtifact: evidenceId,
+      successFailure: verificationResult.valid ? 'Success' : 'Failure',
+      details: `Signature verification: ${verificationResult.valid ? 'Valid' : 'Invalid'} - ${verificationResult.errors?.join(', ') || 'No errors'}`
+    });
+
+    return {
+      valid: verificationResult.valid,
+      signatureValid: verificationResult.signatureValid,
+      certificateValid: verificationResult.certificateValid,
+      details: verificationResult.errors?.join(', ') || 'Signature and certificate are valid'
+    };
+  }
 }
 
 export const storage = new DatabaseStorage();

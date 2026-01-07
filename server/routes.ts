@@ -102,24 +102,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/cases/:caseId/evidence", async (req, res) => {
     try {
+      const { autoSign, ...evidenceData } = req.body;
       const validatedData = insertMasterEvidenceSchema.parse({
-        ...req.body,
+        ...evidenceData,
         caseBinding: req.params.caseId,
       });
-      
+
       // Check if evidence already verified with this hash
       if (validatedData.contentHash) {
         const alreadyVerified = await storage.checkEvidenceAlreadyVerified(validatedData.contentHash);
         if (alreadyVerified) {
-          return res.status(409).json({ 
-            message: "Evidence already verified", 
+          return res.status(409).json({
+            message: "Evidence already verified",
             existingArtifact: alreadyVerified.artifactId,
             verificationDate: alreadyVerified.updatedAt
           });
         }
       }
-      
-      const evidence = await storage.createMasterEvidence(validatedData);
+
+      // Create evidence
+      let evidence = await storage.createMasterEvidence(validatedData);
+
+      // Auto-sign evidence if requested and has content hash
+      if (autoSign && evidence.contentHash) {
+        try {
+          evidence = await storage.signEvidence(evidence.id) || evidence;
+        } catch (signError) {
+          console.error('Auto-signing failed:', signError);
+          // Don't fail the entire request if signing fails
+          // Just log the error and return unsigned evidence
+        }
+      }
+
       res.status(201).json(evidence);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -314,6 +328,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('ChittyVerify status error:', error);
       res.status(500).json({ message: "Failed to check ChittyVerify status" });
+    }
+  });
+
+  // ChittyCert Certificate-based Evidence Signing Endpoints
+  app.post("/api/v1/evidence/:id/sign", async (req, res) => {
+    try {
+      const evidenceId = req.params.id;
+
+      // Sign the evidence
+      const signedEvidence = await storage.signEvidence(evidenceId);
+
+      if (!signedEvidence) {
+        return res.status(404).json({
+          success: false,
+          message: "Evidence not found"
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Evidence signed successfully",
+        data: {
+          evidenceId: signedEvidence.id,
+          artifactId: signedEvidence.artifactId,
+          signature: signedEvidence.signature,
+          certificateSerial: signedEvidence.signedByCertSerial,
+          signedAt: signedEvidence.signatureTimestamp,
+          algorithm: 'RSASSA-PKCS1-v1_5',
+          hashAlgorithm: 'SHA-256'
+        }
+      });
+    } catch (error) {
+      console.error('Evidence signing error:', error);
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to sign evidence"
+      });
+    }
+  });
+
+  app.get("/api/v1/evidence/:id/verify", async (req, res) => {
+    try {
+      const evidenceId = req.params.id;
+
+      // Verify the evidence signature
+      const verificationResult = await storage.verifyEvidenceSignature(evidenceId);
+
+      res.json({
+        success: true,
+        data: {
+          evidenceId,
+          signatureValid: verificationResult.signatureValid,
+          certificateValid: verificationResult.certificateValid,
+          overallValid: verificationResult.valid,
+          details: verificationResult.details,
+          verifiedAt: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('Evidence verification error:', error);
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to verify evidence signature"
+      });
+    }
+  });
+
+  app.get("/api/v1/evidence/:id/signature-info", async (req, res) => {
+    try {
+      const evidenceId = req.params.id;
+      const evidence = await storage.getMasterEvidence(evidenceId);
+
+      if (!evidence) {
+        return res.status(404).json({
+          success: false,
+          message: "Evidence not found"
+        });
+      }
+
+      if (!evidence.signature) {
+        return res.status(404).json({
+          success: false,
+          message: "Evidence is not signed"
+        });
+      }
+
+      res.json({
+        success: true,
+        data: {
+          evidenceId: evidence.id,
+          artifactId: evidence.artifactId,
+          isSigned: !!evidence.signature,
+          certificateSerial: evidence.signedByCertSerial,
+          signedAt: evidence.signatureTimestamp,
+          certificatePem: evidence.signerCertificatePem,
+          algorithm: 'RSASSA-PKCS1-v1_5',
+          hashAlgorithm: 'SHA-256'
+        }
+      });
+    } catch (error) {
+      console.error('Signature info error:', error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to retrieve signature information"
+      });
     }
   });
 
