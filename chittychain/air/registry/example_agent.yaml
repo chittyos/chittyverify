@@ -1,8 +1,0 @@
-id: chat-support-bot
-owner: support-engineering
-status: active
-risk_level: medium
-human_override: true
-last_evaluation: null
-notes:  < /dev/null | 
-  Needs onboarding review and escalation policy setup.
