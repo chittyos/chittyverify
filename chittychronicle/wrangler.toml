@@ -5,7 +5,6 @@ compatibility_date = "2024-01-01"
 
 # Production configuration
 [env.production]
-name = "chittytimeline"
 routes = [
   { pattern = "timeline.chitty.com/*", zone_name = "chitty.com" }
 ]
@@ -42,7 +41,6 @@ bucket_name = "chittytimeline-uploads"
 
 # Preview/staging environment
 [env.preview]
-name = "chittytimeline-preview"
 routes = [
   { pattern = "preview.timeline.chitty.com/*", zone_name = "chitty.com" }
 ]
@@ -52,7 +50,6 @@ NODE_ENV = "staging"
 
 # Development environment
 [env.development]
-name = "chittytimeline-dev"
 vars = { NODE_ENV = "development" }
 
 # Cloudflare Pages Functions (serverless API endpoints)

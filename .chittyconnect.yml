@@ -1,0 +1,35 @@
+# ChittyConnect Configuration for chittyverify
+service:
+  name: chittyverify
+  display_name: Chittyverify
+  type: foundation
+  tier: 1
+  organization: CHITTYFOUNDATION
+  chitty_id: ${CHITTYVERIFY_SERVICE_ID}
+  domains:
+    production: verify.chitty.cc
+
+onboarding:
+  endpoint: https://get.chitty.cc/api/onboard
+  provisions: [chitty_id, service_token, certificate, trust_chain]
+
+auth:
+  provider: chittyauth
+  endpoint: https://auth.chitty.cc
+  service_token:
+    source: chittyconnect
+    key: CHITTYVERIFY_SERVICE_TOKEN
+
+secrets:
+  provider: chittyconnect
+  vault: 1password
+  paths:
+    production: op://ChittyOS/chittyverify-prod
+
+github:
+  repository: CHITTYFOUNDATION/chittyverify
+
+monitoring:
+  health:
+    endpoint: /health
+    interval: 60s
