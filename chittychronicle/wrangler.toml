@@ -70,3 +70,7 @@ branch = "main"
 [[deployments]]
 environment = "preview"
 branch = "develop"
+
+# ChittyTrack observability
+[[tail_consumers]]
+service = "chittytrack"
