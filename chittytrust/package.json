@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@anthropic-ai/claude-code": "^1.0.61",
+    "@anthropic-ai/claude-code": "^2.1.7",
     "@chittycorp/app-beacon": "github:chittyos/chittybeacon",
     "@octokit/rest": "^22.0.0",
     "github": "^14.0.0"
