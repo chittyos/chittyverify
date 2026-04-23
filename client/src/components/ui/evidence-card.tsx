@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { TrustIndicator } from "./trust-indicator";
 import { Eye, Share2, Download, Clock, CheckCircle, AlertTriangle, Link as LinkIcon } from "lucide-react";
 import { Link } from "wouter";
-import { QuickShareButton } from "@/components/sharing/QuickShareButton";
 
 interface EvidenceCardProps {
   evidence: {
@@ -186,13 +185,13 @@ export function EvidenceCard({ evidence }: EvidenceCardProps) {
               View Details
             </Button>
           </Link>
-          <QuickShareButton
-            evidenceId={evidence.id}
-            evidenceTitle={evidence.title}
-            evidenceType={evidence.type}
-            size="default"
+          <Button
             variant="outline"
-          />
+            size="default"
+            className="px-4 h-11"
+          >
+            <Share2 className="w-4 h-4" />
+          </Button>
           <Button 
             variant="outline" 
             size="default"
