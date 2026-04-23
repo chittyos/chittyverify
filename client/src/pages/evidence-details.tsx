@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, FileText, Calendar, Shield, TrendingUp, Users, BookOpen } from "lucide-react";
-import { apiUrl } from "@/lib/api";
+import { apiRequest } from "@/lib/queryClient";
 import { toEvidenceDetail, type DocumentDetail } from "@/lib/adapters";
 
 export default function EvidenceDetails() {
@@ -16,8 +16,7 @@ export default function EvidenceDetails() {
   const { data: detail, isLoading } = useQuery({
     queryKey: ["/documents", evidenceId],
     queryFn: async () => {
-      const res = await fetch(apiUrl(`/documents/${evidenceId}`));
-      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      const res = await apiRequest("GET", `/documents/${evidenceId}`);
       return res.json() as Promise<DocumentDetail>;
     },
     enabled: !!evidenceId,

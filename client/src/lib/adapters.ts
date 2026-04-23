@@ -47,6 +47,7 @@ export interface DocumentDetail {
 /** Shape that existing SPA components expect */
 export interface EvidenceCardData {
   id: string;
+  artifactId: string;
   title: string;
   description: string;
   type: string;
@@ -64,6 +65,7 @@ export function toEvidenceCard(doc: EvidenceDocument): EvidenceCardData {
   const meta = doc.metadata ? safeParse(doc.metadata) : {};
   return {
     id: doc.id,
+    artifactId: doc.content_hash?.slice(0, 12)?.toUpperCase() || doc.id.slice(0, 12).toUpperCase(),
     title: meta.title || doc.file_name || doc.id,
     description: meta.description || doc.document_type || '',
     type: doc.document_type || 'unknown',

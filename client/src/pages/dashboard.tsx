@@ -8,6 +8,7 @@ import { Shield, FileCheck, Zap, Search } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
 import { apiUrl } from "@/lib/api";
+import { apiRequest } from "@/lib/queryClient";
 import { toEvidenceCard, type EvidenceDocument } from "@/lib/adapters";
 
 export default function Dashboard() {
@@ -16,8 +17,7 @@ export default function Dashboard() {
   const { data, isLoading } = useQuery({
     queryKey: ["/documents"],
     queryFn: async () => {
-      const res = await fetch(apiUrl("/documents?limit=50"));
-      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      const res = await apiRequest("GET", "/documents?limit=50");
       return res.json() as Promise<{ documents: EvidenceDocument[]; meta: { count: number } }>;
     },
   });
