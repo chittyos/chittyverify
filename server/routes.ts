@@ -8,7 +8,18 @@ import { insertCaseSchema, insertMasterEvidenceSchema, insertAtomicFactSchema } 
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  
+
+  // Health endpoint
+  const healthResponseSchema = z.object({
+    status: z.literal('ok'),
+    service: z.literal('chittyverify'),
+    version: z.string(),
+  });
+
+  app.get('/health', (_req, res) => {
+    res.json(healthResponseSchema.parse({ status: 'ok', service: 'chittyverify', version: '1.0.0' }));
+  });
+
   // ChittyID Integration Routes
   app.post('/api/chittyid/validate', async (req, res) => {
     try {
