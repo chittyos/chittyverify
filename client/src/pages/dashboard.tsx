@@ -2,47 +2,42 @@ import { useQuery } from "@tanstack/react-query";
 import { Navigation } from "@/components/ui/navigation";
 import { Footer } from "@/components/ui/footer";
 import { Button } from "@/components/ui/button";
-import { OneClickAuthentication } from "@/components/authentication/OneClickAuthentication";
+import { Input } from "@/components/ui/input";
 import { EvidenceCard } from "@/components/ui/evidence-card";
-import ChittyBeaconWidget from "@/components/beacon/ChittyBeaconWidget";
-import { QuickShareButton } from "@/components/sharing/QuickShareButton";
-import { Shield, FileCheck, Zap } from "lucide-react";
+import { Shield, FileCheck, Zap, Search } from "lucide-react";
 import { useState } from "react";
+import { Link } from "wouter";
+import { apiUrl } from "@/lib/api";
+import { toEvidenceCard, type EvidenceDocument } from "@/lib/adapters";
 
 export default function Dashboard() {
-  const [selectedCaseId, setSelectedCaseId] = useState<string>("case-1");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: cases, isLoading: casesLoading } = useQuery({
-    queryKey: ["/api/cases"],
+  const { data, isLoading } = useQuery({
+    queryKey: ["/documents"],
+    queryFn: async () => {
+      const res = await fetch(apiUrl("/documents?limit=50"));
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      return res.json() as Promise<{ documents: EvidenceDocument[]; meta: { count: number } }>;
+    },
   });
 
-  const { data: currentCase } = useQuery({
-    queryKey: ["/api/cases", selectedCaseId],
-    enabled: !!selectedCaseId,
+  const { data: pipelineStatus } = useQuery({
+    queryKey: ["/pipe/status"],
+    queryFn: async () => {
+      const res = await fetch(apiUrl("/pipe/status"));
+      if (!res.ok) return null;
+      return res.json();
+    },
   });
 
-  const { data: evidence, isLoading: evidenceLoading } = useQuery({
-    queryKey: ["/api/cases", selectedCaseId, "evidence"],
-    enabled: !!selectedCaseId,
-  });
-
-
-  if (casesLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 border-4 border-primary-blue border-t-transparent rounded-full animate-spin"></div>
-          <div className="text-lg text-muted-foreground">Loading ChittyVerify...</div>
-        </div>
-      </div>
-    );
-  }
+  const evidence = data?.documents?.map(toEvidenceCard) || [];
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
-      {/* Clean Hero Section */}
+
+      {/* Hero Section */}
       <section className="py-20 border-b border-border/50">
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="text-center">
@@ -55,35 +50,63 @@ export default function Dashboard() {
                 <span className="text-primary">Verify</span>
               </h1>
             </div>
-            
+
             <p className="text-xl text-muted-foreground mb-12 max-w-3xl mx-auto">
-              Immutable evidence verification with cryptographic proof - securing legal documents before blockchain commitment
+              AI-powered evidence verification with 12-step document processing pipeline
             </p>
-            
-            <OneClickAuthentication />
+
+            {/* Search */}
+            <div className="max-w-xl mx-auto relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                placeholder="Search documents..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-12 text-lg"
+              />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ChittyBeacon Integration */}
-      <section className="py-16">
-        <div className="container mx-auto px-6 max-w-6xl">
-          <ChittyBeaconWidget />
-        </div>
-      </section>
+      {/* Pipeline Status */}
+      {pipelineStatus && (
+        <section className="py-4 border-b border-border/30">
+          <div className="container mx-auto px-6 max-w-6xl">
+            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+              <span>Pipeline: <strong className="text-foreground">{pipelineStatus.status}</strong></span>
+              {pipelineStatus.pendingBatches && (
+                <>
+                  <span>Collection queue: {pipelineStatus.pendingBatches.collection}</span>
+                  <span>Preservation queue: {pipelineStatus.pendingBatches.preservation}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Evidence Dashboard */}
       <section className="py-16">
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="flex items-center justify-between mb-12">
-            <h2 className="text-4xl font-bold text-foreground">Evidence Vault</h2>
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-              <Zap className="w-5 h-5 mr-2" />
-              Upload Evidence
-            </Button>
+            <h2 className="text-4xl font-bold text-foreground">
+              Evidence Vault
+              {data?.meta && (
+                <span className="text-lg font-normal text-muted-foreground ml-4">
+                  {data.meta.count} documents
+                </span>
+              )}
+            </h2>
+            <Link href="/upload">
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+                <Zap className="w-5 h-5 mr-2" />
+                Upload Evidence
+              </Button>
+            </Link>
           </div>
 
-          {evidenceLoading ? (
+          {isLoading ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="bg-card border border-border rounded-xl p-8 animate-pulse">
@@ -93,14 +116,17 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-          ) : evidence && Array.isArray(evidence) && evidence.length > 0 ? (
+          ) : evidence.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {evidence.map((item: any, index: number) => (
-                <EvidenceCard 
-                  key={item.id} 
-                  evidence={item}
-                />
-              ))}
+              {evidence
+                .filter((item) =>
+                  !searchQuery ||
+                  item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  item.type.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                .map((item) => (
+                  <EvidenceCard key={item.id} evidence={item} />
+                ))}
             </div>
           ) : (
             <div className="bg-card border border-border rounded-xl p-16 text-center">
@@ -111,12 +137,14 @@ export default function Dashboard() {
               </div>
               <h3 className="text-3xl font-bold text-foreground mb-4">Ready to Verify Evidence</h3>
               <p className="text-lg text-muted-foreground mb-10 max-w-lg mx-auto">
-                Upload your first document to create immutable verification records with cryptographic proof
+                Upload your first document to start the AI-powered verification pipeline
               </p>
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-                <Zap className="w-5 h-5 mr-2" />
-                Upload First Evidence
-              </Button>
+              <Link href="/upload">
+                <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+                  <Zap className="w-5 h-5 mr-2" />
+                  Upload First Evidence
+                </Button>
+              </Link>
             </div>
           )}
         </div>
