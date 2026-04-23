@@ -10,8 +10,14 @@ import { z } from "zod";
 export async function registerRoutes(app: Express): Promise<Server> {
 
   // Health endpoint
+  const healthResponseSchema = z.object({
+    status: z.literal('ok'),
+    service: z.literal('chittyverify'),
+    version: z.string(),
+  });
+
   app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', service: 'chittyverify', version: '1.0.0' });
+    res.json(healthResponseSchema.parse({ status: 'ok', service: 'chittyverify', version: '1.0.0' }));
   });
 
   // ChittyID Integration Routes
