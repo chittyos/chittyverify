@@ -66,8 +66,8 @@ export function toEvidenceCard(doc: EvidenceDocument): EvidenceCardData {
   return {
     id: doc.id,
     artifactId: doc.content_hash?.slice(0, 12)?.toUpperCase() || doc.id.slice(0, 12).toUpperCase(),
-    title: meta.title || doc.file_name || doc.id,
-    description: meta.description || doc.document_type || '',
+    title: (meta.title as string) || doc.file_name || doc.id,
+    description: (meta.description as string) || doc.document_type || '',
     type: doc.document_type || 'unknown',
     status: mapProcessingStatus(doc.processing_status),
     trustScore: Math.round((doc.evidence_strength_score || 0) * 100),
