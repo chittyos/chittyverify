@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { apiUrl } from "./api";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -7,16 +8,25 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('chitty_auth_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  const headers: Record<string, string> = {
+    ...getAuthHeaders(),
+    ...(data ? { "Content-Type": "application/json" } : {}),
+  };
+
+  const res = await fetch(apiUrl(url), {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
   });
 
   await throwIfResNotOk(res);
@@ -29,8 +39,9 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
-      credentials: "include",
+    const url = apiUrl(queryKey.join("/") as string);
+    const res = await fetch(url, {
+      headers: getAuthHeaders(),
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
