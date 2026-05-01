@@ -102,7 +102,7 @@ Currently registration-only. There is no separate login endpoint — `pages/logi
 - **Adapters live in `lib/adapters.ts`.** Map upstream response shapes there, not inside components.
 - **Use Zod at boundaries.** Validate API response shapes before passing them to components (or rely on the adapter to narrow types).
 - **Type-check before deploy.** `npm run check` must pass; CF Pages builds with `vite build` and a type error there is a deploy regression.
-- **No new sibling-repo imports.** The directories `chittyassets/`, `chittybeacon/`, `chittychain/`, `chittychronicle/`, `chittyevidence/`, `chittyforge/`, `chittyid/`, `chittytrust/` at the repo root are legacy/vendored copies from before the migration. The active SPA does **not** import from any of them. Treat them as dead unless deliberately revived; a future cleanup will remove them.
+- **No vendored sibling repos.** Earlier copies of `chittyassets/`, `chittybeacon/`, `chittychain/`, `chittychronicle/`, `chittyevidence/`, `chittyforge/`, `chittyid/`, `chittytrust/`, and `attached_assets/` were removed (none were imported by the active SPA). If you need code from another ChittyOS service, hit its deployed API rather than vendoring its source.
 
 ## Deploy
 
