@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "tsc",
-    "deploy": "vite build && npx wrangler pages deploy dist/public --project-name chittyverify"
+    "deploy": "vite build && npx cf deploy"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
